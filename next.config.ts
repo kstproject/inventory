@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: false,
+  // Desativa o aviso de conflito Turbopack/Webpack no Next.js 16
+  turbopack: {},
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
