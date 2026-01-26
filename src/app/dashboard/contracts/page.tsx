@@ -12,7 +12,8 @@ import {
     Calendar,
     ArrowUpRight,
     ArrowDownLeft,
-    Upload
+    Upload,
+    Trash2
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,25 @@ export default function ContractsPage() {
         }
     };
 
+    const handleDeleteContract = async (id: string) => {
+        if (!confirm("Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita.")) return;
+
+        const { deleteContractAction } = await import("@/app/actions");
+
+        // Optimistic update
+        setContracts(prev => prev.filter(c => c.id !== id));
+        toast.info("Excluindo contrato...");
+
+        const result = await deleteContractAction(id);
+
+        if (result.success) {
+            toast.success(result.message);
+        } else {
+            toast.error(result.message);
+            fetchContracts(); // Rollback/Refresh on error
+        }
+    };
+
     const filteredContracts = contracts.filter(c =>
         c.employees?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.products?.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -88,6 +108,15 @@ export default function ContractsPage() {
                     <a href={contract.file_url} download>
                         <Download className="h-4 w-4" />
                     </a>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-red-600"
+                    onClick={() => handleDeleteContract(contract.id)}
+                    title="Excluir Contrato"
+                >
+                    <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
         </div>

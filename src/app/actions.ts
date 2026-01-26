@@ -451,3 +451,74 @@ export async function uploadLegacyContractAction(formData: FormData) {
         return { success: false, message: error.message || "Erro ao importar contrato." };
     }
 }
+
+export async function deleteContractAction(contractId: string) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { success: false, message: "Erro de configuração do servidor." };
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+
+    try {
+        // 1. Fetch details for Cleanup and Logging
+        const { data: contract, error: fetchError } = await adminClient
+            .from('signed_contracts')
+            .select('*, employees(name)')
+            .eq('id', contractId)
+            .single();
+
+        if (fetchError || !contract) throw new Error("Contrato não encontrado.");
+
+        // 2. Delete from Storage
+        if (contract.file_url) {
+            try {
+                // Extract path from URL: .../contracts/filename...
+                // URL format: https://.../storage/v1/object/public/contracts/folder/file.pdf
+                // We need 'folder/file.pdf' or just 'file.pdf' depending on bucket root.
+                // Our upload saves to `contracts/${fileName}` or `contracts/legacy/${fileName}` inside 'contracts' bucket.
+                // The public URL usually ends with the path.
+                // Reliable way is to remove the domain prefix.
+                // Or just try to parse the last segments.
+                const url = new URL(contract.file_url);
+                const pathParts = url.pathname.split('/contracts/'); // Split by bucket name
+                if (pathParts.length > 1) {
+                    const filePath = pathParts[1]; // "legacy/file.pdf"
+                    await adminClient.storage.from('contracts').remove([filePath]);
+                }
+            } catch (err) {
+                console.warn("Could not delete file from storage, proceeding with record deletion.", err);
+            }
+        }
+
+        // 3. Delete Record
+        const { error: deleteError } = await adminClient
+            .from('signed_contracts')
+            .delete()
+            .eq('id', contractId);
+
+        if (deleteError) throw deleteError;
+
+        // 4. Log History
+        await adminClient.from('history_logs').insert({
+            action: 'CONTRACT_DELETED',
+            employee_id: contract.employee_id,
+            employee_name: contract.employees?.name || 'Funcionário',
+            transaction_id: `DEL-${contractId.slice(0, 8)}`,
+            date: new Date().toISOString()
+        });
+
+        return { success: true, message: "Contrato excluído com sucesso." };
+
+    } catch (error: any) {
+        console.error("Delete Contract Error:", error);
+        return { success: false, message: error.message || "Erro ao excluir contrato." };
+    }
+}
