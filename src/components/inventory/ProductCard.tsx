@@ -30,18 +30,18 @@ export function ProductCard({ product, onEdit, onDelete, onAssign, onReturn, onV
 
     return (
         <>
-            <Card className="overflow-hidden flex flex-col h-full bg-card hover:shadow-md transition-shadow">
-                <div className="relative h-48 w-full bg-muted cursor-pointer hover:opacity-90 transition-opacity"
+            <Card className="overflow-hidden flex flex-col h-full bg-card border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="relative h-48 w-full bg-slate-50 cursor-pointer overflow-hidden"
                     onClick={() => onView && onView(product)}>
                     {product.imageUrl ? (
                         <Image
                             src={product.imageUrl}
                             alt={product.title}
                             fill
-                            className="object-cover"
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                     ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <div className="flex h-full items-center justify-center text-muted-foreground bg-slate-100/50">
                             Sem Imagem
                         </div>
                     )}

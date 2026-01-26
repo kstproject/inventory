@@ -121,7 +121,7 @@ export function LegacyImportModal({ isOpen, onClose, onSuccess }: LegacyImportMo
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
                     {/* LEFT COLUMN: ITEM DETAILS */}
-                    <div className="space-y-4 border-r pr-6 border-dashed">
+                    <div className="space-y-4 border-b md:border-b-0 md:border-r pb-6 md:pb-0 md:pr-6 border-dashed">
                         <div className="flex items-center gap-2 mb-2">
                             <div className="bg-blue-100 p-1.5 rounded-full text-blue-800 font-bold text-xs">1</div>
                             <h4 className="font-semibold text-sm text-gray-900">Detalhes do Item</h4>

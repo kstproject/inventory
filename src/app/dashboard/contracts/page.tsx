@@ -78,7 +78,7 @@ export default function ContractsPage() {
     );
 
     const ContractCard = ({ contract }: { contract: any }) => (
-        <div className="flex items-center justify-between p-4 border rounded-xl bg-card hover:shadow-sm transition-shadow">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4 border rounded-xl bg-card hover:shadow-sm transition-shadow">
             <div className="flex items-center gap-4">
                 <div className={cn(
                     "p-3 rounded-full",

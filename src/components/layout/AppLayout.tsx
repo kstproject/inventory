@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
@@ -13,7 +14,7 @@ import {
     FileSignature
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/lib/supabase";
@@ -28,9 +29,9 @@ const NAV_ITEMS = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const isPublicPage = pathname === "/" || pathname === "/login" || pathname === "/return";
+    const isAuthRoute = pathname?.startsWith("/dashboard") || pathname?.startsWith("/employees") || pathname?.startsWith("/settings");
 
-    if (isPublicPage) {
+    if (!isAuthRoute) {
         return (
             <>
                 {children}
@@ -41,26 +42,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        window.location.href = "/login";
+        window.location.href = "/";
     };
 
     return (
         <div className="flex min-h-screen w-full bg-muted/40">
             {/* Sidebar Desktop */}
-            <aside className="hidden border-r bg-background md:block md:w-64 md:fixed md:h-full md:inset-y-0 z-30">
-                <div className="flex h-14 items-center border-b px-6 lg:h-[60px]">
-                    <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                        <ShieldCheck className="h-6 w-6 text-primary" />
-                        <span className="">Inventory Pro</span>
+            <aside className="hidden border-r border-[#1e293b] bg-[#0f172a] text-slate-100 md:block md:w-64 md:fixed md:h-full md:inset-y-0 z-30">
+                <div className="flex h-14 items-center border-b border-[#1e293b] px-6 lg:h-[60px]">
+                    <Link href="/dashboard" className="flex items-center gap-2 font-semibold px-2">
+                        <Image
+                            src="/logo-white.png"
+                            alt="Logo"
+                            width={160}
+                            height={40}
+                            className="h-8 w-auto object-contain"
+                        />
                     </Link>
                 </div>
                 <div className="flex flex-col gap-2 p-4">
                     {NAV_ITEMS.map((item) => (
                         <Link key={item.id} href={item.href}>
                             <Button
-                                variant={pathname.startsWith(item.href) ? "secondary" : "ghost"}
-                                className={cn("w-full justify-start gap-2",
-                                    pathname.startsWith(item.href) && "bg-secondary"
+                                variant="ghost"
+                                className={cn("w-full justify-start gap-3 transition-all duration-200",
+                                    pathname.startsWith(item.href)
+                                        ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                                        : "text-slate-400 hover:text-white hover:bg-white/5"
                                 )}
                             >
                                 <item.icon className="h-4 w-4" />
@@ -72,7 +80,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="absolute bottom-4 left-0 w-full px-4">
                     <Button
                         variant="ghost"
-                        className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="w-full justify-start gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20"
                         onClick={handleLogout}
                     >
                         <ShieldCheck className="h-4 w-4" />
@@ -95,22 +103,30 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                 <span className="sr-only">Toggle navigation</span>
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" className="flex flex-col">
+                        <SheetContent side="left" className="flex flex-col bg-[#0f172a] border-r border-[#1e293b] text-slate-100 p-6">
+                            <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                             <nav className="grid gap-2 text-lg font-medium">
                                 <Link
                                     href="/dashboard"
-                                    className="flex items-center gap-2 text-lg font-semibold mb-4"
+                                    className="flex items-center gap-2 font-semibold mb-6 px-2"
                                 >
-                                    <ShieldCheck className="h-6 w-6" />
-                                    <span>Inventory Pro</span>
+                                    <Image
+                                        src="/logo-white.png"
+                                        alt="Grupo Baptista Leal"
+                                        width={180}
+                                        height={50}
+                                        className="h-9 w-auto object-contain"
+                                    />
                                 </Link>
                                 {NAV_ITEMS.map((item) => (
                                     <Link
                                         key={item.id}
                                         href={item.href}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                                            pathname.startsWith(item.href) && "bg-muted text-primary"
+                                            "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-white hover:bg-white/5",
+                                            pathname.startsWith(item.href)
+                                                ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                                                : "text-slate-400"
                                         )}
                                     >
                                         <item.icon className="h-5 w-5" />
@@ -118,6 +134,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                                     </Link>
                                 ))}
                             </nav>
+                            <div className="mt-auto pb-4">
+                                <Button
+                                    variant="ghost"
+                                    className="w-full justify-start gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                    onClick={handleLogout}
+                                >
+                                    <ShieldCheck className="h-4 w-4" />
+                                    Sair do Sistema
+                                </Button>
+                            </div>
                         </SheetContent>
                     </Sheet>
                     <div className="w-full flex-1">

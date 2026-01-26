@@ -121,9 +121,11 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-h-[60vh] overflow-y-auto px-1 pr-4">
-                    <div className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto p-1">
+
+                    {/* LEFT COLUMN: FIELDS (Spans 7 cols) */}
+                    <div className="lg:col-span-7 space-y-5">
                         <FormField
                             control={form.control}
                             name="title"
@@ -132,40 +134,37 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                 <FormItem>
                                     <FormLabel>Nome do Produto</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Ex: Furadeira Bosch" {...field} />
+                                        <Input placeholder="Ex: Furadeira Bosch GSB 13" className="bg-slate-50 border-slate-200 focus:bg-white transition-colors" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="category"
-                            rules={{ required: "Categoria é obrigatória" }}
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Categoria</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione uma categoria" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {categories.map((cat) => (
-                                                <SelectItem key={cat} value={cat}>
-                                                    {cat}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="category"
+                                rules={{ required: "Categoria é obrigatória" }}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Categoria</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className="bg-slate-50 border-slate-200 focus:bg-white">
+                                                    <SelectValue placeholder="Selecione..." />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {categories.map((cat) => (
+                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                             <FormField
                                 control={form.control}
                                 name="quantity"
@@ -173,21 +172,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                     <FormItem>
                                         <FormLabel>Quantidade</FormLabel>
                                         <FormControl>
-                                            <Input type="number" min="1" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="value"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Valor Unitário (R$)</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" min="0" step="0.01" {...field} />
+                                            <Input type="number" min="1" className="bg-slate-50 border-slate-200 focus:bg-white" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -198,6 +183,19 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
+                                name="value"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Valor Unitário (R$)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" min="0" step="0.01" className="bg-slate-50 border-slate-200 focus:bg-white" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
                                 name="assetType"
                                 rules={{ required: "Selecione o tipo do bem" }}
                                 render={({ field }) => (
@@ -205,7 +203,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                         <FormLabel>Tipo do Bem</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className="bg-slate-50 border-slate-200 focus:bg-white">
                                                     <SelectValue placeholder="Selecione" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -218,21 +216,21 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                     </FormItem>
                                 )}
                             />
-
-                            <FormField
-                                control={form.control}
-                                name="serialNumber"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Nº de Série / Patrimônio</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="SN123456" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
                         </div>
+
+                        <FormField
+                            control={form.control}
+                            name="serialNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nº de Série / Patrimônio</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="SN123456" className="bg-slate-50 border-slate-200 focus:bg-white font-mono uppercase" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <FormField
                             control={form.control}
@@ -241,7 +239,11 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                 <FormItem>
                                     <FormLabel>Descrição</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Detalhes do produto, estado de conservação, etc." {...field} />
+                                        <Textarea
+                                            placeholder="Detalhes adicionais do produto..."
+                                            className="bg-slate-50 border-slate-200 focus:bg-white resize-none min-h-[100px]"
+                                            {...field}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -249,54 +251,56 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                         />
                     </div>
 
-                    <div className="space-y-6">
-                        <FormItem>
-                            <FormLabel>Imagem do Produto</FormLabel>
-                            <Card className="border-dashed">
-                                <CardContent className="flex flex-col items-center justify-center p-6 min-h-[300px]">
-                                    {imagePreview ? (
-                                        <div className="relative w-full h-[250px]">
-                                            <Image
-                                                src={imagePreview}
-                                                alt="Preview"
-                                                fill
-                                                className="object-contain rounded-md"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full shadow-lg"
-                                                onClick={removeImage}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
+                    {/* RIGHT COLUMN: IMAGE (Spans 5 cols) */}
+                    <div className="lg:col-span-5 space-y-4">
+                        <FormLabel className="block mb-2">Imagem do Produto</FormLabel>
+                        <div className="h-full max-h-[400px]">
+                            {imagePreview ? (
+                                <div className="relative w-full h-64 lg:h-full min-h-[250px] border rounded-xl overflow-hidden bg-slate-100 group">
+                                    <Image
+                                        src={imagePreview}
+                                        alt="Preview"
+                                        fill
+                                        className="object-contain p-2"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={removeImage}
+                                            className="shadow-lg"
+                                        >
+                                            <X className="h-4 w-4 mr-2" /> Remover Imagem
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center w-full h-64 lg:h-full min-h-[250px] border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 hover:border-blue-400 transition-all group">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                                            <Upload className="w-6 h-6 text-slate-400 group-hover:text-blue-500" />
                                         </div>
-                                    ) : (
-                                        <div className="text-center">
-                                            <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                                            <div className="text-sm text-muted-foreground mb-4">
-                                                Cancele ou selecione um arquivo
-                                            </div>
-                                            <Input
-                                                type="file"
-                                                accept="image/*"
-                                                className="max-w-xs mx-auto text-xs"
-                                                onChange={handleImageUpload}
-                                            />
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </FormItem>
+                                        <p className="mb-2 text-sm text-slate-500 font-medium">Clique para enviar uma foto</p>
+                                        <p className="text-xs text-slate-400">JPG, PNG (Max 5MB)</p>
+                                    </div>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleImageUpload}
+                                    />
+                                </label>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-4 border-t pt-6">
-                    <Button type="button" variant="outline" onClick={onCancel}>
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                    <Button type="button" variant="ghost" onClick={onCancel} className="text-slate-500 hover:text-slate-900">
                         Cancelar
                     </Button>
-                    <Button type="submit">
+                    <Button type="submit" className="bg-blue-900 hover:bg-blue-800 text-white min-w-[150px]">
                         {initialData ? "Salvar Alterações" : "Cadastrar Produto"}
                     </Button>
                 </div>

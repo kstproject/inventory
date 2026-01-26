@@ -104,55 +104,7 @@ export default function SettingsPage() {
         setNewCategory("");
     };
 
-    const [legacyFile, setLegacyFile] = useState<File | null>(null);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-    const [legacyNotes, setLegacyNotes] = useState("");
 
-    const handleImportLegacy = async () => {
-        if (!legacyFile || !selectedEmployeeId) {
-            toast.error("Selecione um arquivo e um funcionário.");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const fileExt = legacyFile.name.split('.').pop();
-            const fileName = `${Date.now()}_legacy_${selectedEmployeeId}.${fileExt}`;
-            const filePath = `legacy/${fileName}`;
-
-            const { data, error: storageError } = await supabase.storage
-                .from('contracts')
-                .upload(filePath, legacyFile);
-
-            if (storageError) throw storageError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('contracts')
-                .getPublicUrl(filePath);
-
-            const { error: dbError } = await supabase
-                .from('signed_contracts')
-                .insert({
-                    employee_id: selectedEmployeeId,
-                    type: 'LEGACY',
-                    file_url: publicUrl,
-                    notes: legacyNotes,
-                    status: 'ACTIVE'
-                });
-
-            if (dbError) throw dbError;
-
-            toast.success("Contrato legado importado com sucesso!");
-            setLegacyFile(null);
-            setLegacyNotes("");
-            setSelectedEmployeeId("");
-        } catch (error: any) {
-            console.error(error);
-            toast.error("Erro ao importar contrato.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (!user) return <div className="p-8">Carregando configurações...</div>;
 
@@ -164,10 +116,9 @@ export default function SettingsPage() {
             </div>
 
             <Tabs defaultValue="account" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="account">Minha Conta</TabsTrigger>
                     <TabsTrigger value="categories">Categorias</TabsTrigger>
-                    <TabsTrigger value="import">Importar</TabsTrigger>
                     <TabsTrigger value="admin">Admin</TabsTrigger>
                 </TabsList>
 
@@ -271,72 +222,7 @@ export default function SettingsPage() {
                     </Card>
                 </TabsContent>
 
-                {/* IMPORT TAB */}
-                <TabsContent value="import">
-                    <Card className="mt-6">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Upload className="h-5 w-5" />
-                                Importar Contratos Legados
-                            </CardTitle>
-                            <CardDescription>Digitalize contratos físicos antigos e vincule a funcionários.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Documento (PDF ou Imagem)</Label>
-                                        <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer relative">
-                                            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                                            <span className="text-sm text-muted-foreground">
-                                                {legacyFile ? legacyFile.name : "Arraste ou clique para upload"}
-                                            </span>
-                                            <input
-                                                type="file"
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                onChange={(e) => setLegacyFile(e.target.files?.[0] || null)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Vincular a Funcionário</Label>
-                                        <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione o funcionário" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {useInventoryStore.getState().employees.map(emp => (
-                                                    <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Observações</Label>
-                                        <Input
-                                            placeholder="Ex: Contrato de 2023 - Obra X"
-                                            value={legacyNotes}
-                                            onChange={(e) => setLegacyNotes(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <Button
-                                className="w-full bg-[#b49b67]"
-                                onClick={handleImportLegacy}
-                                disabled={loading || !legacyFile || !selectedEmployeeId}
-                            >
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Processar e Salvar Contrato
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
 
                 {/* ADMIN TAB */}
                 <TabsContent value="admin">
