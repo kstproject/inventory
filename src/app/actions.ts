@@ -328,3 +328,126 @@ export async function uploadReturnAction(formData: FormData) {
         return { success: false, message: error.message || "Erro ao processar solicitação." };
     }
 }
+
+export async function uploadLegacyContractAction(formData: FormData) {
+    const file = formData.get('file') as File;
+    const employeeId = formData.get('employeeId') as string;
+    const isSigned = formData.get('isSigned') === 'true';
+    const productJson = formData.get('product') as string; // NEW: Product Payload
+
+    if (!file || !employeeId) {
+        return { success: false, message: "Arquivo e Funcionário são obrigatórios." };
+    }
+
+    console.log(`[Server Action] Uploading legacy contract for ${employeeId}...`);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { success: false, message: "Erro de configuração do servidor." };
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+
+    try {
+        // 0. Fetch Employee Name (needed for Product Assignment)
+        const { data: employee, error: empError } = await adminClient
+            .from('employees')
+            .select('name')
+            .eq('id', employeeId)
+            .single();
+
+        if (empError || !employee) throw new Error("Funcionário não encontrado.");
+
+        // 1. Upload File
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_legacy_${employeeId}.${fileExt}`;
+        const filePath = `contracts/legacy/${fileName}`;
+
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const { error: uploadError } = await adminClient.storage
+            .from('contracts')
+            .upload(filePath, buffer, {
+                contentType: file.type,
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = adminClient.storage
+            .from('contracts')
+            .getPublicUrl(filePath);
+
+        // 2. Create Product (If provided)
+        let productId = null;
+        const transactionId = `LEGACY-${Date.now()}`;
+
+        if (productJson) {
+            const productData = JSON.parse(productJson);
+            productId = crypto.randomUUID();
+
+            const { error: productError } = await adminClient.from('products').insert({
+                id: productId,
+                title: productData.title,
+                category: productData.category,
+                quantity: productData.quantity || 1,
+                value: productData.value || 0,
+                serial_number: productData.serialNumber,
+                asset_type: productData.assetType || 'PERMANENT',
+                status: 'ASSIGNED',
+                assigned_to_id: employeeId,
+                assigned_to_name: employee.name,
+                image_url: `https://placehold.co/600x400/EEE/31343C.png?font=montserrat&text=${encodeURIComponent(productData.title)}`
+            });
+
+            if (productError) throw productError;
+
+            // Log Product Creation (Legacy Import)
+            await adminClient.from('history_logs').insert({
+                product_id: productId,
+                action: 'CREATED',
+                employee_id: employeeId,
+                employee_name: employee.name, // "Admin" or Employee? "Item já está com Fulano"
+                transaction_id: transactionId,
+                date: new Date().toISOString()
+            });
+        }
+
+        // 3. Register Contract
+        const { error: contractError } = await adminClient
+            .from('signed_contracts')
+            .insert({
+                employee_id: employeeId,
+                product_id: productId, // Link to the new item
+                type: 'LEGACY',
+                file_url: publicUrl,
+                status: isSigned ? 'VERIFIED' : 'PENDING_SIGNATURE'
+            });
+
+        if (contractError) throw contractError;
+
+        // 4. Log Contract History
+        await adminClient.from('history_logs').insert({
+            action: 'ASSIGNED', // "Legacy Assignment"
+            product_id: productId, // Link log to product
+            employee_id: employeeId,
+            employee_name: employee.name,
+            transaction_id: transactionId,
+            date: new Date().toISOString()
+        });
+
+        return { success: true, message: "Contrato e Item importados com sucesso!", url: publicUrl };
+
+    } catch (error: any) {
+        console.error("Legacy Upload Error:", error);
+        return { success: false, message: error.message || "Erro ao importar contrato." };
+    }
+}

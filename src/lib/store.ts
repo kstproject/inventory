@@ -353,8 +353,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
                 const { error } = await supabase.from('products').update({
                     status: 'IN_STOCK',
                     assigned_to_id: null,
-                    assigned_to_name: null,
-                    current_transaction_id: null
+                    assigned_to_name: null
                 }).eq('id', productId);
                 if (error) throw error;
             }

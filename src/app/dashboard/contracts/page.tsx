@@ -18,11 +18,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { LegacyImportModal } from "./LegacyImportModal";
 
 export default function ContractsPage() {
     const [contracts, setContracts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showLegacyModal, setShowLegacyModal] = useState(false);
 
     useEffect(() => {
         fetchContracts();
@@ -105,7 +107,7 @@ export default function ContractsPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button className="bg-[#1e3a8a] gap-2">
+                    <Button className="bg-[#1e3a8a] gap-2" onClick={() => setShowLegacyModal(true)}>
                         <Upload className="h-4 w-4" /> Importar Legado
                     </Button>
                 </div>
@@ -137,9 +139,17 @@ export default function ContractsPage() {
                     <p className="text-muted-foreground">Nenhum contrato encontrado.</p>
                 </div>
             )}
+
+            <LegacyImportModal
+                isOpen={showLegacyModal}
+                onClose={() => setShowLegacyModal(false)}
+                onSuccess={fetchContracts}
+            />
         </div>
     );
 }
+
+
 
 function cn(...classes: any[]) {
     return classes.filter(Boolean).join(' ');
