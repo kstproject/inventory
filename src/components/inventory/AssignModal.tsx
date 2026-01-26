@@ -22,6 +22,7 @@ import { TermDocument } from "../documents/TermDocument";
 import { sendTermEmail } from "@/app/actions";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { v4 as uuidv4 } from 'uuid';
 
 interface AssignModalProps {
     product: Product | null;
@@ -35,10 +36,14 @@ export function AssignModal({ product, isOpen, onClose }: AssignModalProps) {
     const [quantityToAssign, setQuantityToAssign] = useState(1);
     const [currentStep, setCurrentStep] = useState(1);
     const [isSending, setIsSending] = useState(false);
+    const [transactionId, setTransactionId] = useState("");
 
     // Reset quantity when modal opens
     useEffect(() => {
-        if (isOpen) setQuantityToAssign(1);
+        if (isOpen) {
+            setQuantityToAssign(1);
+            setTransactionId(uuidv4()); // Generate new ID for this session
+        }
     }, [isOpen]);
 
     const componentRef = useRef<HTMLDivElement>(null);
@@ -64,14 +69,49 @@ export function AssignModal({ product, isOpen, onClose }: AssignModalProps) {
     });
 
     const generatePdfBase64 = async () => {
-        if (!componentRef.current) return null;
+        if (!componentRef.current) {
+            console.error("PDF Gen Error: componentRef.current is null");
+            return null;
+        }
 
         try {
-            // Reduce scale for smaller file size (1.5 is usually sufficient for print)
-            const canvas = await html2canvas(componentRef.current, { scale: 1.5 });
+            // Wait a bit to ensure everything is rendered
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-            // Use JPEG with 0.8 quality instead of PNG
-            const imgData = canvas.toDataURL('image/jpeg', 0.80);
+            const canvas = await html2canvas(componentRef.current, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                backgroundColor: "#ffffff",
+                windowWidth: componentRef.current.scrollWidth,
+                windowHeight: componentRef.current.scrollHeight,
+                onclone: (clonedDoc) => {
+                    // Forcefully replace all oklch values in styles
+                    const allElements = clonedDoc.getElementsByTagName('*');
+                    for (let i = 0; i < allElements.length; i++) {
+                        const el = allElements[i] as HTMLElement;
+                        const styles = window.getComputedStyle(el);
+
+                        // Check common properties that might use oklch in Tailwind 4
+                        const props: (keyof CSSStyleDeclaration)[] = ['color', 'backgroundColor', 'borderColor', 'outlineColor', 'textDecorationColor', 'fill', 'stroke'];
+
+                        props.forEach(prop => {
+                            const val = styles[prop] as string;
+                            if (val && val.includes('oklch')) {
+                                // Simple fallback: if it's a problematic color, force it to something safe
+                                // or try to let the browser convert it to RGB by reading it (though onclone doc might have issues)
+                                if (prop === 'backgroundColor') el.style.backgroundColor = '#ffffff';
+                                else if (prop === 'color') el.style.color = '#000000';
+                                else if (prop === 'borderColor') el.style.borderColor = '#000000';
+                                else (el.style as any)[prop] = 'currentColor';
+                            }
+                        });
+                    }
+                }
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
             const pdf = new jsPDF({
                 orientation: 'portrait',
@@ -80,11 +120,10 @@ export function AssignModal({ product, isOpen, onClose }: AssignModalProps) {
             });
 
             pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-            // Clean base64 string
             const base64 = pdf.output('datauristring').split(',')[1];
             return base64;
         } catch (e) {
-            console.error("PDF Gen Error", e);
+            console.error("PDF Gen Error:", e);
             return null;
         }
     };
@@ -93,34 +132,47 @@ export function AssignModal({ product, isOpen, onClose }: AssignModalProps) {
         if (!selectedEmployee || !product) return;
 
         setIsSending(true);
-        toast.info("Gerando documento e enviando...");
+        toast.info("Gerando documento e atribuindo...");
 
         try {
             const pdfBase64 = await generatePdfBase64();
             if (!pdfBase64) throw new Error("Falha ao gerar PDF.");
 
+            // 1. Assign First (DB Update)
+            await assignProduct(product.id, selectedEmployee.id, quantityToAssign, "Termo Enviado via Sistema", transactionId);
+            toast.success("Produto atribuído com sucesso!");
+
+            // 2. Then Send Email (Async)
+            toast.info("Enviando e-mail do termo...");
+
+            // We can let this run without blocking the UI heavily, or wait for it.
+            // Waiting is better to confirm email success to the admin.
             const result = await sendTermEmail(selectedEmployee, product, adminName, pdfBase64);
 
             if (result.success) {
-                toast.success(result.message);
-                // Complete assignment with quantity
-                await assignProduct(product.id, selectedEmployee.id, quantityToAssign, "Termo Enviado via Sistema");
-                onClose();
-                setSelectedEmployeeId("");
-                setCurrentStep(1);
+                toast.success("E-mail enviado com sucesso.");
             } else {
-                toast.error(result.message);
+                toast.warning(`Atribuído, mas houve um erro no envio do e-mail: ${result.message}`);
             }
+
+            onClose();
+            setSelectedEmployeeId("");
+            setCurrentStep(1);
         } catch (error) {
             console.error(error);
-            toast.error("Erro ao processar envio.");
+            toast.error("Erro ao processar a atribuição.");
         } finally {
             setIsSending(false);
         }
     };
 
     const handleNext = () => {
-        if (selectedEmployee) setCurrentStep(2);
+        if (selectedEmployee) {
+            setCurrentStep(2);
+            // Regenerate ID if needed, or keep the on-open one.
+            // Usually generate on step 2 start to be fresher? 
+            // Logic: One transaction ID per attempt.
+        }
     };
 
     if (!product) return null;
@@ -180,6 +232,7 @@ export function AssignModal({ product, isOpen, onClose }: AssignModalProps) {
                                     employee={selectedEmployee}
                                     adminName={adminName}
                                     date={new Date()}
+                                    transactionId={transactionId}
                                 />
                             </div>
 

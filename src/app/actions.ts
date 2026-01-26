@@ -30,7 +30,8 @@ export async function sendTermEmail(
                 product,
                 adminName,
                 pdfBase64,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                returnLink: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/return`
             })
         });
 
@@ -42,5 +43,288 @@ export async function sendTermEmail(
     } catch (error) {
         console.error("Error sending to n8n:", error);
         return { success: false, message: "Erro ao conectar com n8n." };
+    }
+}
+
+import { createClient } from '@supabase/supabase-js';
+
+
+export async function createAdminUser(email: string, password: string) {
+    console.log(`[Server Action] Creating admin user ${email}...`);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.warn("SUPABASE_SERVICE_ROLE_KEY not set. Cannot create users via API.");
+        return { success: false, message: "Erro: Chave de serviço não configurada no servidor." };
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+
+    try {
+        const { data, error } = await adminClient.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true
+        });
+
+        if (error) throw error;
+
+        return { success: true, message: `Administrador ${email} criado com sucesso!` };
+    } catch (error: any) {
+        console.error("Error creating user:", error);
+        return { success: false, message: error.message || "Erro ao criar usuário." };
+    }
+}
+
+export async function assignProductAction(
+    productId: string,
+    employeeId: string,
+    quantity: number,
+    transactionId: string
+) {
+    console.log(`[Server Action] Assigning product ${productId} to ${employeeId}...`);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { success: false, message: "Erro de configuração do servidor." };
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+
+    try {
+        // 1. Fetch Product and Employee
+        const { data: product, error: prodError } = await adminClient
+            .from('products')
+            .select('*')
+            .eq('id', productId)
+            .single();
+
+        if (prodError || !product) throw new Error("Produto não encontrado.");
+
+        const { data: employee, error: empError } = await adminClient
+            .from('employees')
+            .select('*')
+            .eq('id', employeeId)
+            .single();
+
+        if (empError || !employee) throw new Error("Funcionário não encontrado.");
+
+        // 2. Logic based on Asset Type
+        if (product.asset_type === 'CONSUMABLE') {
+            const newQty = product.quantity - quantity;
+            if (newQty < 0) return { success: false, message: "Quantidade insuficiente." };
+
+            const { error: updateError } = await adminClient
+                .from('products')
+                .update({ quantity: newQty })
+                .eq('id', productId);
+
+            if (updateError) throw updateError;
+
+            // Log Consumption
+            await adminClient.from('history_logs').insert({
+                product_id: productId,
+                action: 'CONSUMED',
+                employee_id: employee.id,
+                employee_name: employee.name,
+                transaction_id: transactionId,
+                date: new Date().toISOString()
+            });
+
+            return { success: true, message: `Consumo registrado para ${employee.name}` };
+        }
+
+        // PERMANENT / ASSET Logic
+        let targetProductId = productId;
+
+        if (quantity >= product.quantity) {
+            // Full Assignment
+            const { error: updateError } = await adminClient
+                .from('products')
+                .update({
+                    status: 'ASSIGNED',
+                    assigned_to_id: employee.id,
+                    assigned_to_name: employee.name
+                })
+                .eq('id', productId);
+
+            if (updateError) throw updateError;
+        } else {
+            // Partial Assignment (Split)
+            const newOriginalQty = product.quantity - quantity;
+
+            // A. Update Original
+            const { error: updateError } = await adminClient
+                .from('products')
+                .update({ quantity: newOriginalQty })
+                .eq('id', productId);
+
+            if (updateError) throw updateError;
+
+            // B. Create New Assigned Item
+            const newId = crypto.randomUUID();
+            targetProductId = newId;
+
+            const { error: insertError } = await adminClient
+                .from('products')
+                .insert({
+                    id: newId,
+                    title: product.title,
+                    description: product.description,
+                    category: product.category,
+                    quantity: quantity,
+                    value: product.value,
+                    image_url: product.image_url,
+                    serial_number: product.serial_number,
+                    asset_type: product.asset_type,
+                    status: 'ASSIGNED',
+                    assigned_to_id: employee.id,
+                    assigned_to_name: employee.name
+                });
+
+            if (insertError) throw insertError;
+
+            // Log Creation of Split
+            await adminClient.from('history_logs').insert({
+                product_id: newId,
+                action: 'CREATED',
+                date: new Date().toISOString(),
+                employee_name: 'Sistema (Divisão de Lote)'
+            });
+        }
+
+        // 3. Log Assignment History
+        await adminClient.from('history_logs').insert({
+            product_id: targetProductId,
+            action: 'ASSIGNED',
+            employee_id: employee.id,
+            employee_name: employee.name,
+            transaction_id: transactionId,
+            date: new Date().toISOString()
+        });
+
+        return { success: true, message: "Produto atribuído com sucesso." };
+
+    } catch (error: any) {
+        console.error("Assign Action Error:", error);
+        return { success: false, message: error.message || "Erro ao atribuir produto." };
+    }
+}
+
+export async function uploadReturnAction(formData: FormData) {
+    const file = formData.get('file') as File;
+    const employeeId = formData.get('employeeId') as string;
+    const itemsJson = formData.get('items') as string;
+    const actionType = formData.get('actionType') as 'DELIVERY' | 'RETURN';
+
+    if (!file || !employeeId || !itemsJson || !actionType) {
+        return { success: false, message: "Dados incompletos." };
+    }
+
+    const items = JSON.parse(itemsJson);
+
+    console.log(`[Server Action] Processing ${actionType} for ${employeeId} with ${items.length} items...`);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return { success: false, message: "Erro de configuração do servidor." };
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+
+    try {
+        // 1. Upload File
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${employeeId}_${actionType}.${fileExt}`;
+        const filePath = `contracts/${fileName}`;
+
+        // Convert File to ArrayBuffer for upload
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        const { error: uploadError } = await adminClient.storage
+            .from('contracts')
+            .upload(filePath, buffer, {
+                contentType: file.type,
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = adminClient.storage
+            .from('contracts')
+            .getPublicUrl(filePath);
+
+        // 2. Process Items
+        for (const productId of items) {
+            // A. Register Contract
+            const { error: contractError } = await adminClient
+                .from('signed_contracts')
+                .insert({
+                    employee_id: employeeId,
+                    product_id: productId,
+                    type: actionType,
+                    file_url: publicUrl,
+                    status: 'PENDING_VERIFICATION'
+                });
+
+            if (contractError) throw contractError;
+
+            // B. If RETURN, update product status
+            if (actionType === 'RETURN') {
+                // Fetch to get current assignment details for log
+                const { data: product } = await adminClient
+                    .from('products')
+                    .select('assigned_to_name')
+                    .eq('id', productId)
+                    .single();
+
+                const { error: productError } = await adminClient
+                    .from('products')
+                    .update({
+                        status: 'IN_STOCK',
+                        assigned_to_id: null,
+                        assigned_to_name: null
+                    })
+                    .eq('id', productId);
+
+                if (productError) throw productError;
+
+                // Log History
+                await adminClient.from('history_logs').insert({
+                    product_id: productId,
+                    action: 'RETURNED',
+                    employee_name: product?.assigned_to_name,
+                    date: new Date().toISOString()
+                });
+            }
+        }
+
+        return { success: true, message: actionType === 'RETURN' ? "Devolução registrada com sucesso!" : "Entrega confirmada com sucesso!" };
+
+    } catch (error: any) {
+        console.error("Upload Action Error:", error);
+        return { success: false, message: error.message || "Erro ao processar solicitação." };
     }
 }

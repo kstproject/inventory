@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Product, AssetType } from "@/lib/types";
+import { useInventoryStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -33,6 +34,12 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProps) {
+    const { categories, fetchCategories } = useInventoryStore();
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
+
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
 
     const form = useForm({
@@ -47,6 +54,35 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
             assetType: initialData?.assetType || "PERMANENT",
         },
     });
+
+    // EFFECT: Reset form when initialData changes (fixes "modal broken" issue)
+    useEffect(() => {
+        if (initialData) {
+            form.reset({
+                title: initialData.title,
+                description: initialData.description || "",
+                category: initialData.category,
+                quantity: initialData.quantity,
+                value: initialData.value,
+                imageUrl: initialData.imageUrl || "",
+                serialNumber: initialData.serialNumber || "",
+                assetType: initialData.assetType || "PERMANENT",
+            });
+            setImagePreview(initialData.imageUrl || null);
+        } else {
+            form.reset({
+                title: "",
+                description: "",
+                category: "",
+                quantity: 1,
+                value: 0,
+                imageUrl: "",
+                serialNumber: "",
+                assetType: "PERMANENT",
+            });
+            setImagePreview(null);
+        }
+    }, [initialData, form]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -86,8 +122,8 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-h-[60vh] overflow-y-auto px-1 pr-4">
+                    <div className="space-y-4">
                         <FormField
                             control={form.control}
                             name="title"
@@ -117,12 +153,11 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="ferramentas">Ferramentas Elétricas</SelectItem>
-                                            <SelectItem value="epi">EPIs</SelectItem>
-                                            <SelectItem value="informatica">Informática</SelectItem>
-                                            <SelectItem value="veiculos">Veículos</SelectItem>
-                                            <SelectItem value="moveis">Móveis</SelectItem>
-                                            <SelectItem value="outros">Outros</SelectItem>
+                                            {categories.map((cat) => (
+                                                <SelectItem key={cat} value={cat}>
+                                                    {cat}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -160,7 +195,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
                                 name="assetType"
@@ -177,8 +212,6 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                             <SelectContent>
                                                 <SelectItem value="PERMANENT">Permanente</SelectItem>
                                                 <SelectItem value="CONSUMABLE">Consumo</SelectItem>
-                                                <SelectItem value="USED">Usado</SelectItem>
-                                                <SelectItem value="NEW">Novo</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -222,7 +255,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                             <Card className="border-dashed">
                                 <CardContent className="flex flex-col items-center justify-center p-6 min-h-[300px]">
                                     {imagePreview ? (
-                                        <div className="relative w-full h-full min-h-[250px]">
+                                        <div className="relative w-full h-[250px]">
                                             <Image
                                                 src={imagePreview}
                                                 alt="Preview"
@@ -233,7 +266,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                                 type="button"
                                                 variant="destructive"
                                                 size="icon"
-                                                className="absolute top-0 right-0 h-6 w-6"
+                                                className="absolute -top-2 -right-2 h-8 w-8 rounded-full shadow-lg"
                                                 onClick={removeImage}
                                             >
                                                 <X className="h-4 w-4" />
@@ -243,12 +276,12 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                                         <div className="text-center">
                                             <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
                                             <div className="text-sm text-muted-foreground mb-4">
-                                                Arraste ou clique para fazer upload
+                                                Cancele ou selecione um arquivo
                                             </div>
                                             <Input
                                                 type="file"
                                                 accept="image/*"
-                                                className="max-w-xs mx-auto"
+                                                className="max-w-xs mx-auto text-xs"
                                                 onChange={handleImageUpload}
                                             />
                                         </div>
@@ -259,7 +292,7 @@ export function ProductForm({ initialData, onSubmit, onCancel }: ProductFormProp
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-4">
+                <div className="flex justify-end gap-4 border-t pt-6">
                     <Button type="button" variant="outline" onClick={onCancel}>
                         Cancelar
                     </Button>

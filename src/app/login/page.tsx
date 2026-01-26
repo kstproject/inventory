@@ -18,6 +18,12 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!email || !password) {
+            toast.error("Por favor, preencha todos os campos.");
+            return;
+        }
+
         setLoading(true);
 
         try {

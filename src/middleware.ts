@@ -59,18 +59,19 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     const isLoginPage = request.nextUrl.pathname.startsWith('/login')
+    const isPublicPage = request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/return')
 
-    // If user is not signed in and needed, redirect to login page
-    if (!user && !isLoginPage) {
+    // If user is not signed in and visits protected page
+    if (!user && !isLoginPage && !isPublicPage) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
 
-    // If user is signed in and visits login page, redirect to home
+    // If user is signed in and visits login page, redirect to dashboard
     if (user && isLoginPage) {
         const url = request.nextUrl.clone()
-        url.pathname = '/'
+        url.pathname = '/dashboard'
         return NextResponse.redirect(url)
     }
 

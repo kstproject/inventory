@@ -1,204 +1,131 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Search, Filter, Box } from "lucide-react";
-import { useInventoryStore } from "@/lib/store";
-import { ProductCard } from "@/components/inventory/ProductCard";
-import { ProductForm } from "@/components/inventory/ProductForm";
-import { AssignModal } from "@/components/inventory/AssignModal";
+import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Product } from "@/lib/types";
-import { toast } from "sonner";
+import { ArrowRight, ShieldCheck, ClipboardCheck, BarChart3 } from "lucide-react";
 
-import { ProductDetailsModal } from "@/components/inventory/ProductDetailsModal";
+export default function HomePage() {
+    return (
+        <div className="min-h-screen flex flex-col bg-white font-sans">
+            {/* Nav */}
+            <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+                <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-[#1e3a8a] p-2 rounded-lg">
+                            <ShieldCheck className="text-white h-6 w-6" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-lg font-bold text-[#1e3a8a] leading-none tracking-tight">GRUPO</span>
+                            <span className="text-lg font-bold text-[#b49b67] leading-none tracking-tight">BAPTISTA LEAL</span>
+                        </div>
+                    </div>
 
-export default function Dashboard() {
-  const { products, isLoading, fetchData, addProduct, updateProduct, deleteProduct, returnProduct } = useInventoryStore();
+                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
+                        <a href="#features" className="hover:text-[#1e3a8a] transition-colors">Funcionalidades</a>
+                        <a href="#about" className="hover:text-[#1e3a8a] transition-colors">Sobre</a>
+                    </div>
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+                    <Link href="/login">
+                        <Button className="bg-[#1e3a8a] hover:bg-[#1e293b] text-white rounded-full px-8 shadow-md">
+                            Acessar Painel
+                        </Button>
+                    </Link>
+                </div>
+            </nav>
 
-  const [iscreateOpen, setIsCreateOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
-  const [productToAssign, setProductToAssign] = useState<Product | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+            {/* Hero */}
+            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-[#f8fafc] -z-10 skew-x-[-12deg] translate-x-20"></div>
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" ? true : product.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+                <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-8">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-[#1e3a8a] text-sm font-semibold border border-blue-100">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                            </span>
+                            Sistema de Gestão Patrimonial
+                        </div>
 
-  const handleCreateProduct = async (data: Omit<Product, "id" | "history" | "status">) => {
-    await addProduct(data);
-    setIsCreateOpen(false);
-    toast.success("Produto criado com sucesso!");
-  };
+                        <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-[1.1] tracking-tight">
+                            Controle total dos <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a8a] to-[#b49b67]">Ativos Operacionais</span>
+                        </h1>
 
-  const handleUpdateProduct = async (data: Omit<Product, "id" | "history" | "status">) => {
-    if (editingProduct) {
-      await updateProduct(editingProduct.id, data);
-      setEditingProduct(null);
-      toast.success("Produto atualizado!");
-    }
-  };
+                        <p className="text-xl text-gray-600 max-w-lg leading-relaxed">
+                            Gerencie equipamentos, ferramentas e contratos com responsabilidade e eficiência tecnológica. Do canteiro de obras ao escritório.
+                        </p>
 
-  const handleDeleteProduct = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este produto?")) {
-      await deleteProduct(id);
-      toast.info("Produto removido.");
-    }
-  };
+                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                            <Link href="/login">
+                                <Button size="lg" className="h-16 px-10 text-lg bg-[#b49b67] hover:bg-[#9a8455] text-white rounded-xl shadow-xl transition-all hover:-translate-y-1">
+                                    Começar Agora <ArrowRight className="ml-2 h-5 w-5" />
+                                </Button>
+                            </Link>
+                            <Button variant="outline" size="lg" className="h-16 px-10 text-lg border-2 rounded-xl">
+                                Ver Demonstração
+                            </Button>
+                        </div>
+                    </div>
 
-  const handleReturnProduct = async (product: Product) => {
-    if (confirm(`Confirmar devolução de ${product.title}?`)) {
-      await returnProduct(product.id);
-      toast.success("Produto devolvido ao estoque.");
-    }
-  };
+                    <div className="relative animate-in fade-in zoom-in duration-1000">
+                        <div className="absolute -inset-4 bg-gradient-to-tr from-[#1e3a8a]/20 to-[#b49b67]/20 rounded-[2rem] blur-2xl"></div>
+                        <div className="relative bg-white p-2 rounded-[2rem] shadow-2xl border border-gray-100">
+                            <Image
+                                src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2070&auto=format&fit=crop"
+                                alt="Dashboard Preview"
+                                width={1200}
+                                height={800}
+                                className="rounded-[1.8rem] object-cover"
+                            />
+                        </div>
+                        {/* Floating elements */}
+                        <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl border border-gray-50 flex items-center gap-4 animate-bounce">
+                            <div className="bg-green-100 p-2 rounded-full">
+                                <ClipboardCheck className="text-green-600 h-6 w-6" />
+                            </div>
+                            <div>
+                                <div className="text-sm font-bold text-gray-900">Termos Assinados</div>
+                                <div className="text-xs text-gray-500">100% Digital</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-  const handleAssignProduct = (product: Product) => {
-    setProductToAssign(product);
-  };
+            {/* Features Stats */}
+            <section id="features" className="py-20 bg-[#1e3a8a]">
+                <div className="container mx-auto px-6">
+                    <div className="grid md:grid-cols-3 gap-12 text-center">
+                        <div className="space-y-4">
+                            <div className="text-4xl font-bold text-white tracking-tight">Inventário</div>
+                            <p className="text-blue-100/70">Acompanhamento em tempo real de cada item em estoque ou atribuído.</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="text-4xl font-bold text-white tracking-tight">Jurídico</div>
+                            <p className="text-blue-100/70">Termos de responsabilidade com validade digital e rastreabilidade total.</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="text-4xl font-bold text-white tracking-tight">Agilidade</div>
+                            <p className="text-blue-100/70">Fluxos de entrega e devolução simplificados via QR Code e PWA.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Gerencie seu inventário e ativos da empresa.
-          </p>
+            {/* Footer */}
+            <footer className="mt-auto py-12 bg-white border-t border-gray-100">
+                <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div className="flex items-center gap-3">
+                        <ShieldCheck className="text-[#1e3a8a] h-6 w-6" />
+                        <span className="font-bold text-gray-900">Inventory Pro <span className="text-[#b49b67]">Baptista Leal</span></span>
+                    </div>
+                    <div className="text-gray-400 text-sm">
+                        &copy; {new Date().getFullYear()} Grupo Baptista Leal. Tecnologia a serviço da construção.
+                    </div>
+                </div>
+            </footer>
         </div>
-        <Dialog open={iscreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="w-full md:w-auto shadow-md">
-              <Plus className="mr-2 h-5 w-5" />
-              Novo Produto
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Cadastrar Novo Produto</DialogTitle>
-              <DialogDescription>
-                Preencha as informações abaixo para adicionar um item ao inventário.
-              </DialogDescription>
-            </DialogHeader>
-            <ProductForm
-              onSubmit={handleCreateProduct}
-              onCancel={() => setIsCreateOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar produtos..."
-            className="pl-8 bg-background"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-[180px]">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <SelectValue placeholder="Status" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="IN_STOCK">Em Estoque</SelectItem>
-            <SelectItem value="ASSIGNED">Em Uso</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl bg-muted/20">
-          <div className="bg-muted rounded-full p-4 mb-4">
-            <Box className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold">Nenhum produto encontrado</h3>
-          <p className="text-muted-foreground max-w-sm mt-1">
-            Você ainda não tem produtos cadastrados ou sua busca não retornou resultados.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onEdit={setEditingProduct}
-              onDelete={handleDeleteProduct}
-              onAssign={handleAssignProduct}
-              onReturn={handleReturnProduct}
-              onView={setViewingProduct}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Produto</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do produto.
-            </DialogDescription>
-          </DialogHeader>
-          {editingProduct && (
-            <ProductForm
-              initialData={editingProduct}
-              onSubmit={handleUpdateProduct}
-              onCancel={() => setEditingProduct(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Modal */}
-      <AssignModal
-        product={productToAssign}
-        isOpen={!!productToAssign}
-        onClose={() => setProductToAssign(null)}
-      />
-
-      {/* Details Modal */}
-      <ProductDetailsModal
-        product={viewingProduct}
-        isOpen={!!viewingProduct}
-        onClose={() => setViewingProduct(null)}
-      />
-    </div>
-  );
+    );
 }
